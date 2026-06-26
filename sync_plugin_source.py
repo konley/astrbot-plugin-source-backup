@@ -8,8 +8,13 @@ AstrBot 完整插件源生成脚本
 - 输出完整插件源 JSON
 
 用法:
-  $env:GITHUB_TOKEN = "ghp_xxx"  # 可选，大幅提高 API 限速
-  python sync_plugin_source.py
+  python sync_plugin_source.py                 # 自动读取 .config 或环境变量
+  python sync_plugin_source.py --token ghp_xxx # 临时指定 token（单次有效）
+
+首次运行会自动创建 .config 文件，你只需粘贴 token 进去即可。
+
+Token 获取地址: https://github.com/settings/tokens
+需要权限: public_repo 即可
 """
 import urllib.request
 import urllib.error
@@ -18,6 +23,7 @@ import os
 import re
 import shutil
 import sys
+import argparse
 from datetime import date, datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -27,18 +33,48 @@ try:
 except ImportError:
     HAS_YAML = False
 
+# ==== 方式一：直接在这里填入 token（适合个人使用，git 提交时注意不要暴露）====
+# GITHUB_TOKEN = "ghp_你的token"
+# =========================================================================
+_INLINE_TOKEN = ""
+
 API_BASE = "https://api.github.com/repos/AstrBotDevs/AstrBot_Plugins_Collection/issues"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 BACKUP_DIR = os.path.join(BASE_DIR, "backup")
 LATEST_FILE = os.path.join(BASE_DIR, "plugin_source.json")
+CONFIG_FILE = os.path.join(BASE_DIR, ".config")
 
 MAX_WORKERS = 20
 REQUEST_TIMEOUT = 15
 
+_CLI_TOKEN = ""
+
+
+def get_token():
+    """读取 GitHub Token，优先级: --token > 脚本内联 > 环境变量 > .config 文件"""
+    if _CLI_TOKEN:
+        return _CLI_TOKEN
+    if _INLINE_TOKEN:
+        return _INLINE_TOKEN
+    token = os.environ.get("GITHUB_TOKEN", "")
+    if token:
+        return token
+    try:
+        with open(CONFIG_FILE) as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("GITHUB_TOKEN="):
+                    token = line.split("=", 1)[1].strip().strip('"').strip("'")
+                    if token:
+                        return token
+    except (FileNotFoundError, OSError):
+        pass
+    return ""
+
 
 def get_headers():
     headers = {"User-Agent": "astrbot-plugin-source-backup"}
-    token = os.environ.get("GITHUB_TOKEN", "")
+    token = get_token()
     if token:
         headers["Authorization"] = f"Bearer {token}"
     return headers
@@ -240,8 +276,43 @@ def build_source(issues):
     return source
 
 
+def _ensure_config_file():
+    """如果 .config 不存在则创建模板"""
+    if os.path.exists(CONFIG_FILE):
+        return
+
+    # 确保 .config 被 gitignore
+    gitignore = os.path.join(BASE_DIR, ".gitignore")
+    gitignore_content = ""
+    if os.path.exists(gitignore):
+        with open(gitignore) as f:
+            gitignore_content = f.read()
+    if ".config" not in gitignore_content:
+        with open(gitignore, "a") as f:
+            f.write("\n.config\n")
+
+    with open(CONFIG_FILE, "w") as f:
+        f.write("# 在这里填入你的 GitHub Personal Access Token\n")
+        f.write("# 获取地址: https://github.com/settings/tokens\n")
+        f.write("# 需要权限: public_repo\n")
+        f.write('GITHUB_TOKEN="your_token_here"\n')
+
+
 def main():
     ensure_dirs()
+
+    # 检查 token 是否可用
+    if not get_token():
+        _ensure_config_file()
+        print("=" * 50)
+        print("首次使用：")
+        print("1. 打开 https://github.com/settings/tokens")
+        print("2. 点 Generate new token (classic)，勾选 public_repo")
+        print("3. 复制 token 粘贴到 .config 文件中：")
+        print(f"   编辑 {CONFIG_FILE}，将 your_token_here 替换为你的 token")
+        print("4. 重新运行 python sync_plugin_source.py")
+        print("=" * 50)
+        sys.exit(1)
 
     print("=== 步骤 1: 抓取插件提交记录 ===")
     issues = fetch_all_issues()
@@ -266,4 +337,9 @@ def main():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="AstrBot 插件源生成脚本")
+    parser.add_argument("--token", help="GitHub Personal Access Token（临时使用，单次有效）")
+    args = parser.parse_args()
+
+    _CLI_TOKEN = args.token or ""
     main()
