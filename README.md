@@ -14,10 +14,12 @@ https://raw.githubusercontent.com/konley/astrbot-plugin-source-backup/main/plugi
 
 ```
 ├── .config                       # GitHub Token 配置文件（已 gitignore）
-├── plugin_source.json            # 最新数据（固定名，用于订阅）
+├── plugin_source.json            # 最新 JSON 数据（固定名，用于订阅）
+├── plugin_source.md              # 最新 Markdown 表格（方便预览）
 ├── sync_plugin_source.py         # 抓取脚本
 └── backup/
-    └── plugin_source_YYYY-MM-DD.json  # 每日快照
+    ├── plugin_source_YYYY-MM-DD.json  # 每日 JSON 快照
+    └── plugin_source_YYYY-MM-DD.md    # 每日 MD 快照
 ```
 
 ## Token 配置

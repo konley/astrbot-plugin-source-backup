@@ -42,6 +42,7 @@ API_BASE = "https://api.github.com/repos/AstrBotDevs/AstrBot_Plugins_Collection/
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 BACKUP_DIR = os.path.join(BASE_DIR, "backup")
 LATEST_FILE = os.path.join(BASE_DIR, "plugin_source.json")
+LATEST_MD = os.path.join(BASE_DIR, "plugin_source.md")
 CONFIG_FILE = os.path.join(BASE_DIR, ".config")
 
 MAX_WORKERS = 20
@@ -298,6 +299,33 @@ def _ensure_config_file():
         f.write('GITHUB_TOKEN="your_token_here"\n')
 
 
+def write_markdown(source):
+    lines = ["# AstrBot 插件源\n"]
+    lines.append(f"共 {len(source)} 个插件 | 更新于 {date.today()}\n\n")
+    lines.append("| 名称 | 作者 | 版本 | Star | 描述 | 标签 | 更新于 |\n")
+    lines.append("|------|------|------|------|------|------|--------|\n")
+
+    def fmt(val):
+        return str(val) if val else ""
+
+    def escape(s):
+        return str(s).replace("|", "\\|").replace("\n", " ") if s else ""
+
+    for name in sorted(source.keys()):
+        e = source[name]
+        display = escape(e.get("display_name", "") or name)
+        author = escape(e.get("author", ""))
+        version = escape(e.get("version", ""))
+        stars = e.get("stars", "")
+        desc = escape(e.get("desc", ""))
+        tags = e.get("tags", [])
+        tags_str = ", ".join(escape(t) for t in tags) if tags else ""
+        updated = escape(e.get("updated_at", ""))
+        lines.append(f"| {display} | {author} | {version} | {stars} | {desc} | {tags_str} | {updated} |\n")
+
+    return "".join(lines)
+
+
 def main():
     ensure_dirs()
 
@@ -328,11 +356,17 @@ def main():
         json.dump(source, f, ensure_ascii=False, indent=2)
     print(f"已保存: plugin_source.json  ({len(source)} 个插件)")
 
+    md_content = write_markdown(source)
+    with open(LATEST_MD, "w", encoding="utf-8") as f:
+        f.write(md_content)
+    print(f"已保存: plugin_source.md")
+
     today = date.today().strftime("%Y-%m-%d")
-    backup_name = f"plugin_source_{today}.json"
-    backup_path = os.path.join(BACKUP_DIR, backup_name)
-    shutil.copy2(LATEST_FILE, backup_path)
-    print(f"已存档: backup/{backup_name}")
+    for ext, latest in [("json", LATEST_FILE), ("md", LATEST_MD)]:
+        backup_name = f"plugin_source_{today}.{ext}"
+        backup_path = os.path.join(BACKUP_DIR, backup_name)
+        shutil.copy2(latest, backup_path)
+        print(f"已存档: backup/{backup_name}")
 
     print("\n订阅地址: https://raw.githubusercontent.com/konley/astrbot-plugin-source-backup/main/plugin_source.json")
 
