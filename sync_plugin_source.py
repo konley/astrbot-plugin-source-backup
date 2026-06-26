@@ -285,16 +285,16 @@ def _ensure_config_file():
     gitignore = os.path.join(BASE_DIR, ".gitignore")
     gitignore_content = ""
     if os.path.exists(gitignore):
-        with open(gitignore) as f:
+        with open(gitignore, encoding="utf-8") as f:
             gitignore_content = f.read()
     if ".config" not in gitignore_content:
-        with open(gitignore, "a") as f:
+        with open(gitignore, "a", encoding="utf-8") as f:
             f.write("\n.config\n")
 
-    with open(CONFIG_FILE, "w") as f:
-        f.write("# 在这里填入你的 GitHub Personal Access Token\n")
-        f.write("# 获取地址: https://github.com/settings/tokens\n")
-        f.write("# 需要权限: public_repo\n")
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        f.write("# GitHub Personal Access Token\n")
+        f.write("# Get one at: https://github.com/settings/tokens\n")
+        f.write("# Required scope: public_repo\n")
         f.write('GITHUB_TOKEN="your_token_here"\n')
 
 
@@ -304,14 +304,15 @@ def main():
     # 检查 token 是否可用
     if not get_token():
         _ensure_config_file()
-        print("=" * 50)
-        print("首次使用：")
-        print("1. 打开 https://github.com/settings/tokens")
-        print("2. 点 Generate new token (classic)，勾选 public_repo")
-        print("3. 复制 token 粘贴到 .config 文件中：")
-        print(f"   编辑 {CONFIG_FILE}，将 your_token_here 替换为你的 token")
-        print("4. 重新运行 python sync_plugin_source.py")
-        print("=" * 50)
+        print("=" * 55)
+        print("  No GitHub token found.")
+        print("  First time setup:")
+        print("  1. Go to https://github.com/settings/tokens")
+        print("  2. Generate a classic token with scope: public_repo")
+        print("  3. Edit .config file and paste your token:")
+        print(f"     {CONFIG_FILE}")
+        print("  4. Re-run: python sync_plugin_source.py")
+        print("=" * 55)
         sys.exit(1)
 
     print("=== 步骤 1: 抓取插件提交记录 ===")
