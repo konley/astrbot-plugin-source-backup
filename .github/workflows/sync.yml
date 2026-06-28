@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   sync:
@@ -14,8 +14,6 @@ jobs:
     steps:
       - name: Checkout this repo
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.PAT }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
