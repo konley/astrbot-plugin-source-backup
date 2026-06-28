@@ -2,7 +2,7 @@ name: Sync Plugin Source
 
 on:
   schedule:
-    - cron: '0 19 * * *'
+    - cron: '0 0,4,8,12,16,20 * * *'
   workflow_dispatch:
 
 permissions:
